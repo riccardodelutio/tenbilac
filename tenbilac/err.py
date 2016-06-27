@@ -29,7 +29,31 @@ def msb(predictions, targets, auxinputs=None):
 	
 	else:
 		raise ValueError("Wrong pred shape")
+		
+		
+		
 
+def ssb(predictions, targets, auxinputs=None):
+	"""
+	Sum square bias
+	
+	The main purpose of this cost function is to simplify the results when used for backpropagation
+	
+	:param predictions: 3D array (realization, neuron, case), should be appropiratedly masked (thus not directly the output of the net)
+	:param targets: 2D array (neuron, case)
+	
+	"""
+	
+	if predictions.ndim == 3:
+	
+		biases = np.mean(predictions, axis=0) - targets # This is 2D, (label, case)
+		return 0.5*np.sum(np.square(biases))
+	
+	else:
+		raise ValueError("Wrong pred shape")
+
+		
+		
 
 def mab(predictions, targets, auxinputs=None):
 	"""
@@ -90,6 +114,7 @@ def msrb(predictions, targets, auxinputs=None, rawterms=False):
 	
 	else:
 		raise ValueError("Wrong pred shape")
+
 	
 	
 

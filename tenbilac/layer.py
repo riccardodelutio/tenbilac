@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from . import act
-
+from . import der_act
 
 		
 class Layer():	
@@ -27,6 +27,7 @@ class Layer():
 		self.ni = ni
 		self.nn = nn
 		self.actfct = actfct
+		self.deract = der_act.sech2 #Ideally this will depend on the param actfct, TO BE COMPLETED!
 		self.name = name
 		
 		self.weights = np.zeros((self.nn, self.ni)) # first index is neuron, second is input
@@ -111,10 +112,18 @@ class Layer():
 		
 		else:
 			raise RuntimeError("Input shape error")
-
-		
-		
 		
 		
 	
-
+	def derivative_run(self, inputs):
+		"""
+		Necessary for backpropagation
+		
+		TO BE COMPLETED ! 
+		"""
+		
+		if inputs.ndim == 3:
+			assert inputs.shape[1] == self.ni
+			return np.rollaxis(self.deract(np.dot(self.weights, inputs) + self.biases.reshape((self.nn, 1, 1))),1)
+		else:
+			raise RuntimeError("Only 3D inputs impleted for backpropagation")

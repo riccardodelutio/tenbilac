@@ -21,8 +21,8 @@ ntest = 100 # Number of points to draw the regression line
 params = np.linspace(0.0, 10.0, n).reshape((1, n))
 obs = np.sin(params)/(1.0 + params) + noise_scale*np.random.randn(n).reshape((1, n))
 
-obs_normer = tenbilac.utils.Normer(obs)
-params_normer = tenbilac.utils.Normer(params)
+obs_normer = tenbilac.data.Normer(obs)
+params_normer = tenbilac.data.Normer(params)
 
 normobs = obs_normer(obs)
 normparams = params_normer(params)
@@ -30,7 +30,7 @@ normparams = params_normer(params)
 testparams = np.linspace(-1.0, 11, ntest).reshape((1, ntest))
 normtestparams = params_normer(testparams)
 
-net = tenbilac.net.Tenbilac(1, [3])
+net = tenbilac.net.Net(1, [3])
 net.addnoise(wscale=0.3, bscale=0.3)
 
 # We train this normal (non-inverse) regression with params as inputs, and observations as output:

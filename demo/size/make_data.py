@@ -23,7 +23,7 @@ noise_scale = 0.1
 params = np.linspace(0.1, 2.0, n).reshape((1, n))
 obs = np.array([np.sqrt(4.0 + params**2) + noise_scale*noise(n).reshape((1, n)) for rea in range(nrea)])
 
-# To norm this data, we build the Normers:
+# To norm this data, we build the Normers by using the training data (but uni would work as well...):
 obs_normer = tenbilac.data.Normer(obs)
 params_normer = tenbilac.data.Normer(params)
 
@@ -41,11 +41,6 @@ uniobs = np.array([np.sqrt(4.0 + uniparams**2) + noise_scale*noise(unin).reshape
 # To plot the inverse regression, it's good to have samples uniform in obs:
 ntest = 100
 testobs = np.linspace(1.6, 3, ntest).reshape((1, ntest))
-
-
-# Now we norm all these. We build the Normers by using the training data (but uni would work as well...):
-obs_normer = tenbilac.data.Normer(obs)
-params_normer = tenbilac.data.Normer(params)
 
 normtestobs = obs_normer(testobs)
 normuniparams = params_normer(uniparams)

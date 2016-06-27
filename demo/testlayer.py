@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-layer = tenbilac.layer.Layer(ni=2, nn=3, actfct=tenbilac.act.Id())
+layer = tenbilac.layer.Layer(ni=2, nn=3, actfct=tenbilac.act.iden)
 
 #layer.addnoise()
 

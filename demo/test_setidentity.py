@@ -13,7 +13,7 @@ nrea = 2
 no = 4
 
 
-net = tenbilac.net.Tenbilac(ni=ni, nhs=[4, 6, 4], no=no, onlyid=True)
+net = tenbilac.net.Net(ni=ni, nhs=[4, 6, 4], no=no, onlyid=True)
 
 net.setidentity()
 

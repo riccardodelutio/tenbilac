@@ -563,10 +563,10 @@ class Training:
                         self.net.layers[li].weights[i,j] -= eta * grad
                 """
                 
-                self.net.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                self.net.layers[li].weights -= eta * np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
                 
-                logger.info("GRADIENT IN LAYER {} is \n{}".format(li+1,np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))))
+                logger.info("GRADIENT IN LAYER {} IS \n{}".format(li+1,np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))))
 
                 tmpnet = self.net
                 	

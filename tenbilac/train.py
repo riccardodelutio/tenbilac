@@ -563,12 +563,13 @@ class Training:
                         self.net.layers[li].weights[i,j] -= eta * grad
                 """
                 
-                self.net.layers[li].weights -= eta * np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
+                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
                 
                 logger.info("GRADIENT IN LAYER {} IS \n{}".format(li+1,np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))))
+                logger.info("NUMERICAL GRADIENT IN LAYER {} IS \n{}".format(li+1,self.numgrad(li)))
 
-                tmpnet = self.net
+                self.net = tmpnet
                 	
        
 
@@ -603,6 +604,21 @@ class Training:
         self.end()        
         
 
+	def numgrad(self,li,epsilon = 0.0001):
+		
+		tmpnet = self.net
+		grad = np.ones(np.shape(tmpnet.layers[li].weights))
+		
+		for i in range(np.shape(tmpnet.layers[li].weights)[0]):
+		    for j in range(np.shape(tmpnet.layers[li].weights)[1]):
+		        tmpnet.layers[li].weights[i,j] += epsilon 
+		        plus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] -= 2.0 *epsilon
+		        minus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] += epsilon # Reestablishing the correct value of the weight
+		        grad[i,j] = (err.ssb(plus, self.dat.traintargets) - err.ssb(minus, self.dat.traintargets)) / (2.0 * epsilon)	        
+		
+		return grad
 #       def anneal(self, maxiter=100):
 #
 #               self.testcost()

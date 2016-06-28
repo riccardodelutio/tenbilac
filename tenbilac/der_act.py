@@ -8,6 +8,9 @@ of the corresponding activation function automatically
 TO BE COMPLETESD !
 """
 
+
+
+
 def sech2(x):
 	"""
 	Derivative of the default activation function tanh

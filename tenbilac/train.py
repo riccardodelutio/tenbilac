@@ -536,7 +536,11 @@ class Training:
         logger.info("Starting BACKPROP for {} iterations (maximum) ...".format(maxiter))
         
         cost = self.currentcost()
+        
+        tmpnet = self.net
+
         for iter in range(maxiter):
+ 	
             logger.info("Starting iteration number {}, current cost {}, cost difference {}".format(iter+1, self.currentcost(), self.currentcost()-cost))
             cost = self.currentcost()
             
@@ -554,10 +558,15 @@ class Training:
                 """
                 for i in range(np.shape(self.net.layers[li].weights)[0]):
                     for j in range(np.shape(self.net.layers[li].weights)[1]):
-                        self.net.layers[li].weights[i,j] -= eta * np.sum(deltas[li][:,i,:]*self.net.par_run(self.dat.traininputs,li)[:,j,:])
+
+                        grad = np.sum(deltas[li][:,i,:]*tmpnet.par_run(self.dat.traininputs,li)[:,j,:])
+                        self.net.layers[li].weights[i,j] -= eta * grad
                 """
+                
                 self.net.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
+
+                tmpnet = self.net
                 	
        
 

@@ -299,7 +299,6 @@ class Net():
 		Partially run 
 		Necessary for backpropagation
 		"""
-
     	output = inputs
     	for l in self.layers[:index]:
     		output = l.run(output)

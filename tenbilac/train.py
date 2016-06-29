@@ -549,16 +549,16 @@ class Training:
             
             deltas = [1]*len(self.net.layers) #Declaring the list that will contain all the deltas (or "errors")
             
-            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs)) #Last layer delta, note that activation function for this layer is the identity function
+            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs))/(np.shape(outputs)[0]) #Last layer delta, note that activation function for this layer is the identity function
             
             for i in range(-2,-len(self.net.layers)-1,-1):
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
 
             for li in range(len(self.net.layers)):
-                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))/(np.shape(self.dat.traininputs)[0]) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))/(np.shape(self.dat.traininputs)[0])
+                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
                 
-                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))/(np.shape(self.dat.traininputs)[0])-self.numgrad(li,epsilon = 0.0000001)))
+                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
 
                 self.net = tmpnet
                 	

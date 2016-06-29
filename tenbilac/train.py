@@ -553,19 +553,12 @@ class Training:
             
             for i in range(-2,-len(self.net.layers)-1,-1):
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
-                #THE SHAPES ARE CORRECT
-                logger.info("i {}, shape der_run {}, shape rollaxis {}".format(i,np.shape(self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i)),np.shape(np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1))))
 
             for li in range(len(self.net.layers)):
-                #I THINK THE PROBLEM MUST COME FROM HERE
+                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))/(np.shape(self.dat.traininputs)[0]) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))/(np.shape(self.dat.traininputs)[0])
                 
-                logger.info("shape delta {} and shape parrun {}".format(np.shape(deltas[li]),np.shape(self.net.par_run(self.dat.traininputs,li))))
-                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
-                
-                #logger.info("GRADIENT IN LAYER {} IS \n{}".format(li+1,np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))))
-                #logger.info("NUMERICAL GRADIENT IN LAYER {} IS \n{}".format(li+1,self.numgrad(li,epsilon = 0.00000001)))
-                logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.00000000001)))
+                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))/(np.shape(self.dat.traininputs)[0])-self.numgrad(li,epsilon = 0.0000001)))
 
                 self.net = tmpnet
                 	

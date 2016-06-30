@@ -538,6 +538,11 @@ class Training:
         cost = self.currentcost()
         
         tmpnet = self.net
+        B = np.identity(np.size(self.net.get_weights()))
+        oldgrad = np.ones(np.shape(self.net.get_weights()))
+        newgrad = np.ones(np.shape(self.net.get_weights()))
+        s = np.ones(np.shape(self.net.get_weights()))
+        y = np.ones(np.shape(self.net.get_weights()))
 
         for iter in range(maxiter):
                  	
@@ -553,22 +558,34 @@ class Training:
             
             for i in range(-2,-len(self.net.layers)-1,-1):
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
-
+            
+            """
             for li in range(len(self.net.layers)):
                 tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
                 
-<<<<<<< HEAD
                 self.net.layers[li].weights -= eta * np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
             
-
-            tmpnet = self.net
-=======
                 #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
 
-                self.net = tmpnet
->>>>>>> checkinggradient
+                self.net = tmpnet            
+            """
+            
+            if iter == 0:
+        	    oldgrad = np.concatenate([np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))).flatten() for li in range(len(self.net.layers))])
+            else:
+        	    oldgrad = newgrad
+            s = - eta * np.dot(B,oldgrad) 
+            self.net.set_weights(self.net.get_weights()+s)
+            # WHERE TO UPDATE THE BIASES ????????
+            self.net.set_biases(self.net.get_biases()-eta*np.concatenate([np.sum(deltas[li],(0,2)).flatten() for li in range(len(self.net.layers))]))
+            newgrad = np.concatenate([np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))).flatten() for li in range(len(self.net.layers))])
+            y = newgrad - oldgrad
+            B = B + ((np.dot(s,y)+np.dot(y,np.dot(B,y)))/(np.dot(s,y)**2))*np.outer(s,s) - (1./np.dot(s,y))*(np.dot(B,np.outer(y,s)) + np.dot(np.outer(s,y),B)) 			
+
+            tmpnet = self.net
+
                 	
        
 

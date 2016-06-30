@@ -91,6 +91,8 @@ xleftmargin=-1cm
 \item "Error term" of node $i$ in layer $l$ : $\delta_i^{(l)~r,c}$
 \item Activation function $f$ : $a_i^{(l)~r,c}=f(z_i^{(l)~r,c})=\tanh(z_i^{(l)~r,c})$
 \item Derivative of the activation function : $f'(z_i^{(l)~r,c})=\sech(z_i^{(l)~r,c})^2$
+\item Activation function of the output layer $f^{(out)}$ : \\$h_{i}^{r,c}(x^{r,c}_i)=f^{(out)}(z_i^{(out)~r,c})=z_i^{(l)~r,c}$
+\item Derivative of the activation function : $f'(z_i^{(out)~r,c})=1$
 \item Cost function, here we use the Sum Square Bias : \\ $J(W,b) = \frac{1}{2} \sum_i \sum_c \left( \frac{\sum_r h_{i}^{r,c}}{\#r} - y_i \right)^2$
 \item $r$ denotes the realization and $c$ the case
 \end{itemize}
@@ -107,7 +109,6 @@ The goal is to change our weights so that we lower the value of the cost functio
 where $\Delta W_{ij}^{(l)}$ is the amount by which we want to change the weight $W_{ij}^{(l)}$, and where $\eta$ is an arbitrarily chosen parameter (ideally this won't be the case) and is generally $\sim 10^{-3}$. Back-propagation is a way of calculating $\frac{\partial J(W,b)}{\partial W_{ij}^{(l)}}$.\\
 Using the chain rule we have :
 
-% HAVE TO CHECK EQUATION BELOW THIS IS A REALLY KEY POINT
 \begin{equation}
 \frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}} \frac{\partial z^{(l)~r,c}_{i}}{\partial W^{(l)}_{ij}} = \sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}}x_j^{(l)~r,c}~.
 \label{costder}
@@ -120,7 +121,7 @@ Thus we can rewrite eq.\ref{costder} as follows :
 \frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \delta^{(l)~r,c}_i x_j^{(l)~r,c}~.
 \end{equation}
 \\
-Let's now find an easy way to calculate the "error terms" : 
+Let's now find an easy way to calculate the "error terms", starting by the output layer : 
 
 \begin{equation}
 \delta^{(out)~r,c}_i  = \frac{\partial J(W,b)}{\partial z^{(out)~r,c}_i} = \frac{\partial J(W,b)}{\partial a^{(out)~r,c}_i} \frac{\partial a^{(out)~r,c}_i}{\partial z^{(out)~r,c}_i} = \frac{\partial J(W,b)}{\partial a^{(out)~r,c}_i} f'^{(out)}(z^{(out)~r,c}_i) = \frac{\partial J(W,b)}{\partial h^{r,c}_i}~,
@@ -147,10 +148,9 @@ And now for the deltas of the other layers we have :
 \begin{equation}
 \delta^{(l)~r,c}_i = \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_i} = \sum_k \frac{\partial J(W,b)}{\partial z^{(l+1)~r,c}_k}\frac{\partial z^{(l+1)~r,c}_k}{\partial z^{(l)~r,c}_i} = \frac{\partial J(W,b)}{\partial z^{(l+1)~r,c}_k}\frac{\partial z^{(l+1)~r,c}_k}{\partial a^{(l)~r,c}_i} \frac{\partial a^{(l)~r,c}_i}{\partial z^{(l)~r,c}_i} 
 \end{equation}
-%HERE CHECK IF SUPERSCRIPT OF W SHOULD BE L OR L+1
 \[
-= f'(z^{(l)~r,c}_i) \sum_k \delta^{(l+1)~r,c}_k W^{(l)}_{kj}
+= f'(z^{(l)~r,c}_i) \sum_k \delta^{(l+1)~r,c}_k W^{(l+1)}_{ki}~,
 \]
-
+where $k$ denote the indices of the nodes in layer $(l+1)$.
 
 \end{document}

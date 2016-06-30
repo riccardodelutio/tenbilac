@@ -540,7 +540,7 @@ class Training:
         tmpnet = self.net
 
         for iter in range(maxiter):
- 	
+                 	
             logger.info("Starting iteration number {}, current cost {}, cost difference {}".format(iter+1, self.currentcost(), self.currentcost()-cost))
             cost = self.currentcost()
             
@@ -549,25 +549,26 @@ class Training:
             
             deltas = [1]*len(self.net.layers) #Declaring the list that will contain all the deltas (or "errors")
             
-            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs)) #Last layer delta, note that activation function for this layer is the identity function
+            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs))/(np.shape(outputs)[0]) #Last layer delta, note that activation function for this layer is the identity function
             
             for i in range(-2,-len(self.net.layers)-1,-1):
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
-            
-            for li in range(len(self.net.layers)):
-                """
-                for i in range(np.shape(self.net.layers[li].weights)[0]):
-                    for j in range(np.shape(self.net.layers[li].weights)[1]):
 
-                        grad = np.sum(deltas[li][:,i,:]*tmpnet.par_run(self.dat.traininputs,li)[:,j,:])
-                        self.net.layers[li].weights[i,j] -= eta * grad
-                """
+            for li in range(len(self.net.layers)):
+                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
                 
+<<<<<<< HEAD
                 self.net.layers[li].weights -= eta * np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
             
 
             tmpnet = self.net
+=======
+                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
+
+                self.net = tmpnet
+>>>>>>> checkinggradient
                 	
        
 
@@ -602,6 +603,21 @@ class Training:
         self.end()        
         
 
+    def numgrad(self,li,epsilon = 0.0001):
+		
+		tmpnet = self.net
+		grad = np.ones(np.shape(tmpnet.layers[li].weights))
+		
+		for i in range(np.shape(tmpnet.layers[li].weights)[0]):
+		    for j in range(np.shape(tmpnet.layers[li].weights)[1]):
+		        tmpnet.layers[li].weights[i,j] += epsilon 
+		        plus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] -= 2.0 *epsilon
+		        minus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] += epsilon # Reestablishing the correct value of the weight
+		        grad[i,j] = (err.ssb(plus, self.dat.traintargets) - err.ssb(minus, self.dat.traintargets)) / (2.0 * epsilon)	        
+		
+		return grad
 #       def anneal(self, maxiter=100):
 #
 #               self.testcost()

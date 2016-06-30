@@ -1,0 +1,156 @@
+% debut d'un fichier latex standard
+\documentclass[a4paper,12pt,twoside]{article}
+
+% pour l'inclusion de figures en eps,pdf,jpg
+\usepackage{graphicx}
+\usepackage{epstopdf}
+% quelques symboles mathematiques en plus
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{morefloats}
+\usepackage{verbatim}
+% le tout en langue francaise
+%\usepackage[francais]{babel}
+% on peut ecrire directement les caracteres avec l'accent
+% a utiliser sur Linux/Windows
+\usepackage[utf8]{inputenc}
+\usepackage[squaren,Gray]{SIunits}
+\usepackage{subfigure}
+\usepackage{color}
+\usepackage{multirow}
+% a utiliser sur le Mac
+%\usepackage[applemac]{inputenc}
+% pour l'inclusion de links dans le document 
+\usepackage[colorlinks,bookmarks=false,linkcolor=blue,urlcolor=blue]{hyperref}
+\usepackage{wrapfig}
+\paperheight=297mm
+\paperwidth=210mm
+
+% configuration listings (insertion de code)
+\definecolor{colKeys}{rgb}{0,0,0.8}
+\definecolor{colIdentifier}{rgb}{0,0,0}
+\definecolor{colComments}{rgb}{0.6,0.6,0.6}
+\definecolor{colString}{rgb}{0.8,0,0}
+\lstset{
+float=hbp,
+basicstyle=\ttfamily\small,
+identifierstyle=\color{colIdentifier},
+keywordstyle=\color{colKeys},
+stringstyle=\color{colString},
+commentstyle=\color{colComments},
+columns=flexible,
+tabsize=2,
+frame=tRBl,
+frameround=tttt,
+extendedchars=true,
+showspaces=false,
+showstringspaces=false,
+numbers=left,
+numberstyle=\tiny,
+breaklines=true,
+breakautoindent=true,
+captionpos=b,
+xrightmargin=-1cm,
+xleftmargin=-1cm
+}
+
+\setlength{\textheight}{235mm}
+\setlength{\topmargin}{-1.2cm} % pour centrer la page verticalement
+%\setlength{\footskip}{5mm}
+\setlength{\textwidth}{15cm}
+\setlength{\oddsidemargin}{0.56cm}
+\setlength{\evensidemargin}{0.56cm}
+\DeclareMathOperator{\sech}{sech}
+\pagestyle{plain}
+
+% quelques abreviations utiles
+\def \be {\begin{equation}}
+\def \ee {\end{equation}}
+\def \dd  {{\rm d}}
+
+
+\newcommand{\mail}[1]{{\href{mailto:#1}{#1}}}
+\newcommand{\ftplink}[1]{{\href{ftp://#1}{#1}}}
+
+
+\begin{document}
+
+ % Le titre, l'auteur et la date
+\title{Figuring out Back-propagation}
+\maketitle
+
+\section{Conventions}
+\begin{itemize}
+\item Weight from node $j$ to node $i$ in the $l$ layer : $W^{(l)}_{ij}$
+\item Bias to node $i$ in the $l$ layer : $b_i^{(l)}$
+\item $j$-th input of layer $l$ : $x_j^{(l)~r,c}$
+\item Activation of node $i$ in the layer $l$ : $a_i^{(l)~r,c}$
+\item Total weighted sum including the bias : $z_i^{(l)~r,c}$
+\item Hypothesis or output $i$ of the network : $h_{i}^{r,c}(x^{r,c}_i) = a^{(out)~r,c}_i$
+\item Target $i$ of the network : $y_i$
+\item "Error term" of node $i$ in layer $l$ : $\delta_i^{(l)~r,c}$
+\item Activation function $f$ : $a_i^{(l)~r,c}=f(z_i^{(l)~r,c})=\tanh(z_i^{(l)~r,c})$
+\item Derivative of the activation function : $f'(z_i^{(l)~r,c})=\sech(z_i^{(l)~r,c})^2$
+\item Activation function of the output layer $f^{(out)}$ : \\$h_{i}^{r,c}(x^{r,c}_i)=f^{(out)}(z_i^{(out)~r,c})=z_i^{(l)~r,c}$
+\item Derivative of the activation function : $f'(z_i^{(out)~r,c})=1$
+\item Cost function, here we use the Sum Square Bias : \\ $J(W,b) = \frac{1}{2} \sum_i \sum_c \left( \frac{\sum_r h_{i}^{r,c}}{\#r} - y_i \right)^2$
+\item $r$ denotes the realization and $c$ the case
+\end{itemize}
+
+\section{Adapting back-propagation to our case}
+
+The goal is to change our weights so that we lower the value of the cost function. This can be done by gradient descent : 
+
+\begin{equation}
+\Delta W_{ij}^{(l)} = -\eta \frac{\partial J(W,b)}{\partial W_{ij}^{(l)}}~,
+\label{graddescent}
+\end{equation}
+
+where $\Delta W_{ij}^{(l)}$ is the amount by which we want to change the weight $W_{ij}^{(l)}$, and where $\eta$ is an arbitrarily chosen parameter (ideally this won't be the case) and is generally $\sim 10^{-3}$. Back-propagation is a way of calculating $\frac{\partial J(W,b)}{\partial W_{ij}^{(l)}}$.\\
+Using the chain rule we have :
+
+\begin{equation}
+\frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}} \frac{\partial z^{(l)~r,c}_{i}}{\partial W^{(l)}_{ij}} = \sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}}x_j^{(l)~r,c}~.
+\label{costder}
+\end{equation}
+\\
+Let's define the "error terms" by : $\delta^{(l)~r,c}_i = \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_i}$. \\
+Thus we can rewrite eq.\ref{costder} as follows :
+
+\begin{equation}
+\frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \delta^{(l)~r,c}_i x_j^{(l)~r,c}~.
+\end{equation}
+\\
+Let's now find an easy way to calculate the "error terms", starting by the output layer : 
+
+\begin{equation}
+\delta^{(out)~r,c}_i  = \frac{\partial J(W,b)}{\partial z^{(out)~r,c}_i} = \frac{\partial J(W,b)}{\partial a^{(out)~r,c}_i} \frac{\partial a^{(out)~r,c}_i}{\partial z^{(out)~r,c}_i} = \frac{\partial J(W,b)}{\partial a^{(out)~r,c}_i} f'^{(out)}(z^{(out)~r,c}_i) = \frac{\partial J(W,b)}{\partial h^{r,c}_i}~,
+\label{deltaout}
+\end{equation}
+
+because the activation function for the output layer is the identity function (derivative of 1) and $a^{(out)~r,c}_i = h^{r,c}_i$ by definition.\\
+Using the definition of the cost function we obtain : 
+
+\begin{equation}
+\frac{\partial J(W,b)}{\partial h^{r,c}_i}  = \frac{1}{\# r}\left(\frac{\sum_r h_i^{r,c}}{\# r} - y_i \right)~.
+\end{equation}
+ \\
+
+Thus we can rewrite eq.\ref{deltaout} as follows : 
+
+\begin{equation}
+\delta^{(out)~r,c}_i = \frac{1}{\# r}\left(\frac{\sum_r h_i^{r,c}}{\# r} - y_i \right)~.
+\end{equation}
+\\
+
+And now for the deltas of the other layers we have :
+
+\begin{equation}
+\delta^{(l)~r,c}_i = \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_i} = \sum_k \frac{\partial J(W,b)}{\partial z^{(l+1)~r,c}_k}\frac{\partial z^{(l+1)~r,c}_k}{\partial z^{(l)~r,c}_i} = \frac{\partial J(W,b)}{\partial z^{(l+1)~r,c}_k}\frac{\partial z^{(l+1)~r,c}_k}{\partial a^{(l)~r,c}_i} \frac{\partial a^{(l)~r,c}_i}{\partial z^{(l)~r,c}_i} 
+\end{equation}
+\[
+= f'(z^{(l)~r,c}_i) \sum_k \delta^{(l+1)~r,c}_k W^{(l+1)}_{ki}~,
+\]
+where $k$ denote the indices of the nodes in layer $(l+1)$.
+
+\end{document}

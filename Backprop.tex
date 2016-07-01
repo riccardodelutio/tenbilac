@@ -9,6 +9,7 @@
 \usepackage{amsmath}
 \usepackage{morefloats}
 \usepackage{verbatim}
+\usepackage{bm}
 % le tout en langue francaise
 %\usepackage[francais]{babel}
 % on peut ecrire directement les caracteres avec l'accent
@@ -68,6 +69,7 @@ xleftmargin=-1cm
 \def \ee {\end{equation}}
 \def \dd  {{\rm d}}
 
+\newcommand{\matr}[1] {\bm{#1}}
 
 \newcommand{\mail}[1]{{\href{mailto:#1}{#1}}}
 \newcommand{\ftplink}[1]{{\href{ftp://#1}{#1}}}
@@ -113,14 +115,12 @@ Using the chain rule we have :
 \frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}} \frac{\partial z^{(l)~r,c}_{i}}{\partial W^{(l)}_{ij}} = \sum_{r,c} \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_{i}}x_j^{(l)~r,c}~.
 \label{costder}
 \end{equation}
-\\
 Let's define the "error terms" by : $\delta^{(l)~r,c}_i = \frac{\partial J(W,b)}{\partial z^{(l)~r,c}_i}$. \\
 Thus we can rewrite eq.\ref{costder} as follows :
 
 \begin{equation}
 \frac{\partial J(W,b)}{\partial W^{(l)}_{ij}} =\sum_{r,c} \delta^{(l)~r,c}_i x_j^{(l)~r,c}~.
 \end{equation}
-\\
 Let's now find an easy way to calculate the "error terms", starting by the output layer : 
 
 \begin{equation}
@@ -134,15 +134,11 @@ Using the definition of the cost function we obtain :
 \begin{equation}
 \frac{\partial J(W,b)}{\partial h^{r,c}_i}  = \frac{1}{\# r}\left(\frac{\sum_r h_i^{r,c}}{\# r} - y_i \right)~.
 \end{equation}
- \\
-
 Thus we can rewrite eq.\ref{deltaout} as follows : 
 
 \begin{equation}
 \delta^{(out)~r,c}_i = \frac{1}{\# r}\left(\frac{\sum_r h_i^{r,c}}{\# r} - y_i \right)~.
 \end{equation}
-\\
-
 And now for the deltas of the other layers we have :
 
 \begin{equation}
@@ -151,6 +147,35 @@ And now for the deltas of the other layers we have :
 \[
 = f'(z^{(l)~r,c}_i) \sum_k \delta^{(l+1)~r,c}_k W^{(l+1)}_{ki}~,
 \]
+
 where $k$ denote the indices of the nodes in layer $(l+1)$.
+
+\section{Implementing the BFGS algorithm}
+
+Th idea of the BFGS algorithm is to add the matrix $\matr{B_k}$ which is an approximation of the Hessian matrix of the cost function. The BFGS algorithm includes a smart way to calculate this matrix with no need for intermediate matrices to be stored. Usually if we don't have a better hypothesis $\matr{B_0}$ is defined as the identity matrix $\matr{I}$.
+We can define $\mathbf{W_k}$ as the vector containing all the weights at iteration $k$. So $\mathbf{W_0}$ is our initial guess for the weights.  \\
+First we want to find the direction of the update of the weights $\mathbf{p_k}$ by solving the following equation :  
+
+\begin{equation}
+\matr{B_k} \mathbf{p_k} = - \mathbf{\nabla J (\mathbf{W_k})}~.
+\end{equation} 
+Then we perform a dichotomy in order to find an appropriate learning rate $\eta_k$ such that the following update is sensible :
+
+\begin{equation}
+\mathbf{W_{k+1}} = \mathbf{W_k} + \eta_k \mathbf{p_k}~.
+\end{equation} 
+To simplify the notation we can define : $\mathbf{s_k} = \eta_k  \mathbf{p_k}$. We also define the vector $\mathbf{y_k}$ by : $\mathbf{y_k} = \mathbf{\nabla J (\mathbf{W_{k+1}})} - \mathbf{\nabla J (\mathbf{W_k})}$.
+Finally update the matrix $\matr|{B_k}$ as follows :
+
+\begin{equation}
+\matr{B_{k+1}} = \matr{B_k} + \frac{\mathbf{y_k}\mathbf{y_k^T}}{\mathbf{y_k^T}\mathbf{s_k}} - \frac{\matr{B_k}\mathbf{s_k}\mathbf{s_k^T}\matr{B_k}}{\mathbf{s_k^T}\matr{B_k}\mathbf{s_k}}~.
+\end{equation}
+Note that the gradients $\mathbf{\nabla J (\mathbf{W_k})}$ are obtained using the back-propagation algorithm specified above. And also note that for the implementation of this algorithm we only need to store the inverse of the matrix $\matr{B_k}$ : $\matr{B_k^{-1}}$. So that trivially $\matr{B_0^{-1}}$ and applying the Sherman-Morrison formula to the equation regarding the update of $\matr{B_k}$ we find this update relation for its inverse : 
+
+\begin{equation}
+\matr{B_{k+1}^{-1}} = \matr{B_k^{-1}} + \frac{(\mathbf{s_k^T}\mathbf{y_k} + \mathbf{y_k^T}\matr{B_k^{-1}}\mathbf{y_k})(\mathbf{s_k}\mathbf{s_k^T})}{(\mathbf{s_k^T}\mathbf{y_k})^2} - \frac{\matr{B_k^{-1}}\mathbf{y_k}\mathbf{s_k^T}-\mathbf{s_k}\mathbf{y_k^T}\matr{B_k^{-1}}}{\mathbf{s_k^T}\mathbf{y_k}}~,
+\end{equation}
+
+which can be computed quite easily.
 
 \end{document}

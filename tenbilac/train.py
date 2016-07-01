@@ -560,19 +560,6 @@ class Training:
             for i in range(-2,-len(self.net.layers)-1,-1):
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
             
-            """
-            for li in range(len(self.net.layers)):
-                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
-        
-                self.net.layers[li].weights -= eta * np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                self.net.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
-            
-                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
-
-                self.net = tmpnet            
-            """
-            
             if iter == 0:
         	    oldgrad = np.concatenate([np.tensordot(deltas[li],tmpnet.par_run(self.dat.traininputs,li),((0,2),(0,2))).flatten() for li in range(len(self.net.layers))])
             else:
@@ -585,14 +572,12 @@ class Training:
             bool = True 
             for i in range(5):
                 eta = 10**((np.log10(etamin*etamax)*0.5))
-                #logger.info("{}".format(eta))
                 s = - eta * np.dot(B,oldgrad)
                 if not bool:
         	        self.net.set_weights(oldweights)
         	        self.net.set_biases(oldbiases)    	    
                 oldcost = self.currentcost()
                 self.net.set_weights(oldweights+s)
-                # WHERE TO UPDATE THE BIASES ????????
                 self.net.set_biases(oldbiases-eta*np.concatenate([np.sum(deltas[li],(0,2)).flatten() for li in range(len(self.net.layers))]))
                 if (self.currentcost() - oldcost) < 0.:
         	        etamin = eta

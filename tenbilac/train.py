@@ -583,7 +583,7 @@ class Training:
             oldweights = self.net.get_weights()
             oldbiases = self.net.get_biases()
             bool = True 
-            for i in range(4):
+            for i in range(5):
                 eta = 10**((np.log10(etamin*etamax)*0.5))
                 #logger.info("{}".format(eta))
                 s = - eta * np.dot(B,oldgrad)

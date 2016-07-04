@@ -17,3 +17,10 @@ def sech2(x):
 	"""
 	
 	return (1.0/np.cosh(x))**2
+	
+def dersig(x):
+	"""
+	Derivative of the sigmoid activation function
+	"""
+	
+	return (np.exp(x)/(np.exp(x)+1.)**2)

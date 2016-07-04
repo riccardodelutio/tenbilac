@@ -21,7 +21,7 @@ class Net():
     Object representing a network made out of one or several hidden layers.
     """
 
-    def __init__(self, ni, nhs, no=1, onlyid=False, actfctname="tanh", oactfctname="iden", name=None, inames=None, onames=None):
+    def __init__(self, ni, nhs, no=1, onlyid=False, actfctname="sig", oactfctname="iden", name=None, inames=None, onames=None):
         """
         :param ni: Number of input features
         :param nhs: Numbers of neurons in hidden layers
@@ -68,18 +68,19 @@ class Net():
         oactfct = eval("act.{0}".format(oactfctname)) # idem
 
         self.layers = [] # We build a list containing only the hidden layers and the output layer
+        self.partialrun = []
         for (i, nh) in enumerate(self.nhs):
             self.layers.append(layer.Layer(ni=iniarch[i], nn=nh, actfct=actfct, name="h"+str(i)))
+            self.partialrun.append(np.ones(nh))
         # Adding the output layer:
         self.layers.append(layer.Layer(ni=self.nhs[-1], nn=no, actfct=oactfct, name="o"))
-
+        self.partialrun.append(np.ones(no))
         if onlyid: # Then all layers get the Id activation function:
             for l in self.layers:
                 l.actfct = act.iden
 
         logger.info("Built " + str(self))
-
-
+        
 
     def __str__(self):
         """
@@ -275,8 +276,9 @@ class Net():
 
 
         outputs = inputs
-        for l in self.layers:
-            outputs = l.run(outputs)
+        for li in range(len(self.layers)):
+            outputs = self.layers[li].run(outputs)
+            self.partialrun[li] = outputs
         return outputs
 
 
@@ -290,7 +292,9 @@ class Net():
         for l in self.layers[:index]:
             outputs = l.run(outputs)
         outputs = self.layers[index].derivative_run(outputs)
-        return outputs
+        #return outputs
+        logger.info("DER RUN DIFF {}".format(np.mean(outputs-self.partialrun[-1]*(1.-self.partialrun[-1]))))
+        return self.partialrun[-1]*(1.-self.partialrun[-1])
         
         
         
@@ -302,8 +306,9 @@ class Net():
     	output = inputs
     	for l in self.layers[:index]:
     		output = l.run(output)
-    	return output		
-
+    	#return output		
+        logger.info("PAR RUN DIFF {}".format(np.mean(output-self.partialrun[index-1])))		
+        return self.partialrun[index-1]
 
 
 

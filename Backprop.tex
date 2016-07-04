@@ -165,7 +165,7 @@ Then we perform a dichotomy in order to find an appropriate learning rate $\eta_
 \mathbf{W_{k+1}} = \mathbf{W_k} + \eta_k \mathbf{p_k}~.
 \end{equation} 
 To simplify the notation we can define : $\mathbf{s_k} = \eta_k  \mathbf{p_k}$. We also define the vector $\mathbf{y_k}$ by : $\mathbf{y_k} = \mathbf{\nabla J (\mathbf{W_{k+1}})} - \mathbf{\nabla J (\mathbf{W_k})}$.
-Finally update the matrix $\matr|{B_k}$ as follows :
+Finally update the matrix $\matr{B_k}$ as follows :
 
 \begin{equation}
 \matr{B_{k+1}} = \matr{B_k} + \frac{\mathbf{y_k}\mathbf{y_k^T}}{\mathbf{y_k^T}\mathbf{s_k}} - \frac{\matr{B_k}\mathbf{s_k}\mathbf{s_k^T}\matr{B_k}}{\mathbf{s_k^T}\matr{B_k}\mathbf{s_k}}~.

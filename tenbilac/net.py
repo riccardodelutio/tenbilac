@@ -69,6 +69,7 @@ class Net():
 
         self.layers = [] # We build a list containing only the hidden layers and the output layer
         self.partialrun = []
+        self.partialrun.append(np.ones(ni))        
         for (i, nh) in enumerate(self.nhs):
             self.layers.append(layer.Layer(ni=iniarch[i], nn=nh, actfct=actfct, name="h"+str(i)))
             self.partialrun.append(np.ones(nh))
@@ -276,9 +277,10 @@ class Net():
 
 
         outputs = inputs
+        self.partialrun[0] = inputs
         for li in range(len(self.layers)):
             outputs = self.layers[li].run(outputs)
-            self.partialrun[li] = outputs
+            self.partialrun[li+1] = outputs
         return outputs
 
 
@@ -307,7 +309,7 @@ class Net():
     	for l in self.layers[:index]:
     		output = l.run(output)
     	#return output		
-        logger.info("PAR RUN DIFF {}".format(np.mean(output-self.partialrun[index-1])))		
+        logger.info("PAR RUN SHAPE {}".format(np.shape(self.partialrun[index-1])))		
         return self.partialrun[index-1]
 
 

@@ -27,6 +27,7 @@ class Layer():
 		self.ni = ni
 		self.nn = nn
 		self.actfct = actfct
+		#self.deract = der_act.sech2 #Ideally this will depend on the param actfct, TO BE COMPLETED!		
 		self.deract = der_act.dersig #Ideally this will depend on the param actfct, TO BE COMPLETED!
 		self.name = name
 		

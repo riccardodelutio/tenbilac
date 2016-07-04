@@ -294,9 +294,7 @@ class Net():
         for l in self.layers[:index]:
             outputs = l.run(outputs)
         outputs = self.layers[index].derivative_run(outputs)
-        #return outputs
-        logger.info("DER RUN DIFF {}".format(np.mean(outputs-self.partialrun[-1]*(1.-self.partialrun[-1]))))
-        return self.partialrun[-1]*(1.-self.partialrun[-1])
+        return outputs
         
         
         
@@ -308,9 +306,8 @@ class Net():
     	output = inputs
     	for l in self.layers[:index]:
     		output = l.run(output)
-    	#return output		
-        logger.info("PAR RUN SHAPE {}".format(np.shape(self.partialrun[index-1])))		
-        return self.partialrun[index-1]
+    	return output		
+
 
 
 

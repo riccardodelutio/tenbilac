@@ -79,12 +79,12 @@ class Net():
 
         logger.info("Built " + str(self))
 
-
+	"""
 
     def __str__(self):
-        """
+        
         A short string describing the network
-        """
+        
         #return "Tenbilac with architecture {self.arch} and {nparams} params".format(self=self, nparams=self.nparams())
         #archtxt = str(self.ni) + "|" + "|".join(["{n}/{actfct}".format(n=l.nn, actfct=l.actfct.__name__) for l in self.layers])
         archtxt = str(self.ni) + "|" + "|".join(["{n}/{actfct}".format(n=l.nn, actfct=l.actfct.__name__) for l in self.layers])
@@ -95,7 +95,7 @@ class Net():
             return autotxt
         else:
             return "'{name}' {autotxt}".format(name=self.name, autotxt=autotxt)
-
+	"""
 
 
     def report(self):

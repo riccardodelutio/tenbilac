@@ -7,6 +7,8 @@ The "first" real Layer in a network is in fact the first hidden layer.
 
 
 import numpy as np
+import theano.tensor as T
+from theano import function
 
 import logging
 logger = logging.getLogger(__name__)
@@ -26,14 +28,28 @@ class Layer():
 
 		self.ni = ni
 		self.nn = nn
+		
+		x = T.tensor3("x")
+		actx = T.tanh(x)
+		deractx = 1./T.cosh(x)**2
+		actfct = function(inputs=[x],outputs=actx)
+		deract = function(inputs=[x],outputs=deractx)
+		
 		self.actfct = actfct
-		self.deract = der_act.sech2 #Ideally this will depend on the param actfct, TO BE COMPLETED!
+		self.deract = deract
 		self.name = name
 		
 		self.weights = np.zeros((self.nn, self.ni)) # first index is neuron, second is input
 		self.biases = np.zeros(self.nn) # each neuron has its bias
 		
-	
+		w = T.dmatrix("w")
+		i = T.tensor3("i")
+		b = T.tensor3("b")
+		
+		run3x = 1/T.cosh(T.dot(w, i) + b)**2
+		self.run3 = function(inputs=[i,w,b],outputs=run3x)
+		 
+		
 	def addnoise(self, wscale=0.1, bscale=0.1):
 		"""
 		Adds some noise to weights and biases
@@ -105,7 +121,7 @@ class Layer():
 			# ... gives ouput indices (neuron, realization, case)
 			# We need to change the order of those indices:
 			
-			return np.rollaxis(self.actfct(np.dot(self.weights, inputs) + self.biases.reshape((self.nn, 1, 1))), 1)
+			return np.rollaxis(self.run3(inputs,self.weights,self.biases.reshape((self.nn,1,1))),1)
 		
 			# Note that np.ma.dot does not work for 3D arrays!
 			# We do not care about masks at all here, just compute assuming nothing is masked.

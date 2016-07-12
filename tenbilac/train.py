@@ -84,6 +84,13 @@ class Training:
         t = T.dmatrix("t")
         errx = 0.5*T.sum(T.square((T.mean(o, axis=0) - t)))
         self.errfct = function(inputs=[o,t],outputs = errx)
+        
+        d = T.dtensor3("d")
+        tensx = T.tensordot(d,o,((0,2),(0,2)))
+        self.tens = function([d,o],tensx)
+        
+        sumx = T.sum(d,(0,2))
+        self.summ = function([d],sumx)
 
         logger.info("Done with setup of {self}".format(self=self))
 
@@ -290,7 +297,7 @@ class Training:
 
         mscallcase = 1000.0 * float(secondstaken) / (float(callstaken) * self.dat.getntrain()) # Time per call and training case
 
-        logger.info("Iter. {self.optit:4d}, {self.errfctname} train = {self.opterr:.6e}, val = {valerr:.6e} ({valerrratio:4.1f}), {time:.4f} s for {calls} calls ({mscallcase:.4f} ms/cc)".format(
+        logger.info("Iter. {self.optit:4d}, {self.errfctname} train = {self.opterr:}, val = {valerr:} ({valerrratio:4.1f}), {time:.4f} s for {calls} calls ({mscallcase:.4f} ms/cc)".format(
                 self=self, time=secondstaken, valerr=valerr, valerrratio=valerrratio, calls=callstaken, mscallcase=mscallcase))
 
         if self.itersavepath != None:
@@ -365,7 +372,7 @@ class Training:
         if self.dat.valoutputsmask is not None:
             outputs = np.ma.array(outputs, mask=self.dat.valoutputsmask)
 
-        err = self.errfct(outputs, self.dat.traintargets)
+        err = self.errfct(outputs, self.dat.valtargets)
 
         return err
 
@@ -422,7 +429,7 @@ class Training:
 
         for iter in range(maxiter):
                  	
-            logger.info("Starting iteration number {}, current cost {}, cost difference {}".format(iter+1, self.currentcost(), self.currentcost()-cost))
+            logger.info("Starting iteration number {}, current cost {}".format(iter+1, self.currentcost()))
             cost = self.currentcost()
             
             outputs = self.net.run(self.dat.traininputs)
@@ -436,8 +443,8 @@ class Training:
                 deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
 
             for li in range(len(self.net.layers)):
-                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
+                tmpnet.layers[li].weights -= eta * self.tens(deltas[li],self.net.par_run(self.dat.traininputs,li)) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * self.summ(deltas[li])
                 
                 #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
 
@@ -456,10 +463,10 @@ class Training:
         self.optitparams.append(copy.deepcopy(self.params)) # We add a copy of the current params
 
         # Now we evaluate the cost on the validation set:
-        #valerr = self.valcost()
-        #self.optiterrs_val.append(valerr)
+        valerr = self.valcost()
+        self.optiterrs_val.append(valerr)
 
-        #valerrratio = valerr / self.opterr
+        valerrratio = valerr / self.opterr
 
         mscallcase = 1000.0 * float(secondstaken) / (float(callstaken) * self.dat.getntrain()) # Time per call and training case
 

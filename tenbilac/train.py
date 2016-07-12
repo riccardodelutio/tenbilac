@@ -83,9 +83,8 @@ class Training:
         
         o = T.tensor3("o")
         t = T.dmatrix("t")
-        w = T.dvector("w")  
-        errx = 0.5*T.sum(T.square((T.mean(o, axis=0) - t))) + self.regularization * T.sum(T.square(w))
-        self.errfct = function(inputs=[o,t,w],outputs = errx)
+        errx = 0.5*T.sum(T.square((T.sum(o, axis=0)/T.shape(o)[0] - t)))
+        #self.errfct = function(inputs=[o,t],outputs = errx)
 
         logger.info("Done with setup of {self}".format(self=self))
 
@@ -323,7 +322,7 @@ class Training:
         if self.dat.trainoutputsmask is not None:
             outputs = np.ma.array(outputs, mask=self.dat.trainoutputsmask)
 
-        err = self.errfct(outputs, self.dat.traintargets,self.net.get_weights())
+        err = self.errfct(outputs, self.dat.traintargets)
 
 
         self.opterr = err
@@ -351,12 +350,12 @@ class Training:
         err = self.currentcost()
         endtime = datetime.now()
         took = (endtime - starttime).total_seconds()
-        logger.info("On the training set:   {took:.4f} seconds, {self.errfctname} = {self.opterr:.8e}".format(self=self, took=took))
+        logger.info("On the training set:   {took:.4f} seconds".format(self=self, took=took))
         starttime = datetime.now()
         err = self.valcost()
         endtime = datetime.now()
         took = (endtime - starttime).total_seconds()
-        logger.info("On the validation set: {took:.4f} seconds, {self.errfctname} = {err:.8e}".format(self=self, took=took, err=err))
+        logger.info("On the validation set: {took:.4f} seconds".format(self=self, took=took, err=err))
 
 
 
@@ -368,7 +367,7 @@ class Training:
         if self.dat.valoutputsmask is not None:
             outputs = np.ma.array(outputs, mask=self.dat.valoutputsmask)
 
-        err = self.errfct(outputs, self.dat.traintargets,self.net.get_weights())
+        err = self.errfct(outputs, self.dat.traintargets)
 
         return err
 
@@ -383,7 +382,7 @@ class Training:
             self.optbatchchangeits.append(self.optit) # We record this minibatch change
             self.bfgs(**kwargs)
 
-    def bfgs(self, maxiter=100, gtol=1e-8):
+    def bfgs(self, maxiter=100, gtol=1e-10):
 
         self.start()
         logger.info("Starting BFGS for {} iterations (maximum) with gtol={}...".format(maxiter, gtol))
@@ -402,3 +401,92 @@ class Training:
             logger.warning("Optimization output is fishy")
 
         self.end()
+
+    def minibatch_backprop(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs):
+
+        for loopi in range(mbloops):
+            if mbloops > 1:
+                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
+            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
+            self.optbatchchangeits.append(self.optit) # We record this minibatch change
+            self.backprop(**kwargs)
+
+
+
+    def backprop(self, maxiter=100, eta=0.0001):
+
+        self.start()
+        logger.info("Starting BACKPROP for {} iterations (maximum) ...".format(maxiter))
+        
+        cost = self.currentcost()
+        
+        tmpnet = self.net
+
+        for iter in range(maxiter):
+                 	
+            logger.info("Starting iteration number {}, current cost {}, cost difference {}".format(iter+1, self.currentcost(), self.currentcost()-cost))
+            cost = self.currentcost()
+            
+            outputs = self.net.run(self.dat.traininputs)
+            targets = self.dat.traintargets
+            
+            deltas = [1]*len(self.net.layers) #Declaring the list that will contain all the deltas (or "errors")
+            
+            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs))/(np.shape(outputs)[0]) #Last layer delta, note that activation function for this layer is the identity function
+            
+            for i in range(-2,-len(self.net.layers)-1,-1):
+                deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
+
+            for li in range(len(self.net.layers)):
+                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
+                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
+                
+                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
+
+                self.net = tmpnet
+                	
+       
+
+        self.optit += 1
+        now = datetime.now()
+        secondstaken = (now - self.iterationstarttime).total_seconds()
+        callstaken = self.optitcall
+
+        self.optittimes.append(secondstaken)
+        self.optiterrs_train.append(self.opterr)
+        self.optitcalls.append(self.optcall)
+        self.optitparams.append(copy.deepcopy(self.params)) # We add a copy of the current params
+
+        # Now we evaluate the cost on the validation set:
+        valerr = self.valcost()
+        self.optiterrs_val.append(valerr)
+
+        valerrratio = valerr / self.opterr
+
+        mscallcase = 1000.0 * float(secondstaken) / (float(callstaken) * self.dat.getntrain()) # Time per call and training case
+
+        if self.itersavepath != None:
+            self.save(self.itersavepath)
+
+        # We reset the iteration counters:
+        self.iterationstarttime = datetime.now()
+        self.optitcall = 0
+
+        self.end()        
+        
+
+    def numgrad(self,li,epsilon = 0.0001):
+		
+		tmpnet = self.net
+		grad = np.ones(np.shape(tmpnet.layers[li].weights))
+		
+		for i in range(np.shape(tmpnet.layers[li].weights)[0]):
+		    for j in range(np.shape(tmpnet.layers[li].weights)[1]):
+		        tmpnet.layers[li].weights[i,j] += epsilon 
+		        plus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] -= 2.0 *epsilon
+		        minus = tmpnet.run(self.dat.traininputs)
+		        tmpnet.layers[li].weights[i,j] += epsilon # Reestablishing the correct value of the weight
+		        grad[i,j] = (err.ssb(plus, self.dat.traintargets) - err.ssb(minus, self.dat.traintargets)) / (2.0 * epsilon)	        
+		
+		return grad

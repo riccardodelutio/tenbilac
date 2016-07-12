@@ -7,6 +7,8 @@ import scipy.optimize
 from datetime import datetime
 import os
 import copy
+import theano.tensor as T
+from theano import function
 
 import logging
 logger = logging.getLogger(__name__)
@@ -78,6 +80,12 @@ class Training:
         self.autoplot = autoplot
 
         self.regularization = regularization
+        
+        o = T.tensor3("o")
+        t = T.dmatrix("t")
+        w = T.dvector("w")  
+        errx = 0.5*T.sum(T.square((T.mean(o, axis=0) - t))) + self.regularization * T.sum(T.square(w))
+        self.errfct = function(inputs=[o,t,w],outputs = errx)
 
         logger.info("Done with setup of {self}".format(self=self))
 
@@ -315,7 +323,8 @@ class Training:
         if self.dat.trainoutputsmask is not None:
             outputs = np.ma.array(outputs, mask=self.dat.trainoutputsmask)
 
-        err = self.errfct(outputs, self.dat.traintargets, auxinputs=self.dat.trainauxinputs) + self.regularization * np.sum(np.square(self.net.get_weights()))
+        err = self.errfct(outputs, self.dat.traintargets,self.net.get_weights())
+
 
         self.opterr = err
         self.optcall += 1
@@ -359,7 +368,7 @@ class Training:
         if self.dat.valoutputsmask is not None:
             outputs = np.ma.array(outputs, mask=self.dat.valoutputsmask)
 
-        err = self.errfct(outputs, self.dat.valtargets, auxinputs=self.dat.valauxinputs) + self.regularization * np.sum(np.square(self.net.get_weights()))
+        err = self.errfct(outputs, self.dat.traintargets,self.net.get_weights())
 
         return err
 
@@ -393,273 +402,3 @@ class Training:
             logger.warning("Optimization output is fishy")
 
         self.end()
-
-
-
-    def minibatch_l_bfgs_b(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs): # Less effective than BFGS.. Usefull?
-
-        for loopi in range(mbloops):
-            if mbloops > 1:
-                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
-            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
-            self.optbatchchangeits.append(self.optit) # We record this minibatch change
-            self.l_bfgs_b(**kwargs)
-
-    def l_bfgs_b(self, maxiter=100, gtol=1e-8):
-
-        self.start()
-        logger.info("Starting L_BFGS_B for {} iterations (maximum) with gtol={}...".format(maxiter, gtol))
-
-        optres = scipy.optimize.fmin_l_bfgs_b(
-                self.cost, self.params[self.paramslice],
-                fprime=None, args=(), approx_grad=1, bounds=None, m=10, 
-                factr=10000000.0, pgtol=gtol, epsilon=1e-08, iprint=-1, maxfun=15000, maxiter=maxiter,
-                disp=False, callback=self.callback, maxls=20)
-
-        if len(optres) == 3:
-            (xopt, fopt, d) = optres
-            self.cost(xopt) # Is it important to do this, to set the optimal parameters? It seems not.
-            logger.info("Done with optimization, {0} func_calls".format(d['funcalls']))
-        else:
-            logger.warning("Optimization output is fishy")
-
-        self.end()
-
-
-
-    def minibatch_cg(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs): # Less effective than BFGS.. Usefull?
-
-        for loopi in range(mbloops):
-            if mbloops > 1:
-                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
-            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
-            self.optbatchchangeits.append(self.optit) # We record this minibatch change
-            self.cg(**kwargs)
-
-    def cg(self, maxiter):
-
-        self.start()
-        logger.info("Starting CG for {0} iterations (maximum)...".format(maxiter))
-
-        optres = scipy.optimize.fmin_cg(
-                self.cost, self.params,
-                fprime=None, gtol=1e-05,
-                maxiter=maxiter, full_output=True, disp=True, retall=False, callback=self.callback)
-
-        if len(optres) == 5:
-            (xopt, fopt, func_calls, grad_calls, warnflag) = optres
-            self.cost(xopt) # Is it important to do this, to set the optimal parameters? It seems not.
-            logger.info("Done with optimization, {0} func_calls and {1} grad_calls".format(func_calls, grad_calls))
-        else:
-            logger.warning("Optimization output is fishy")
-
-        self.end()
-
-
-
-    def minibatch_powell(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs): # Less effective than BFGS.. Usefull?
-
-        for loopi in range(mbloops):
-            if mbloops > 1:
-                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
-            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
-            self.optbatchchangeits.append(self.optit) # We record this minibatch change
-            self.powell(**kwargs)
-
-
-    def powell(self, maxiter=100, gtol=1e-8):
-
-        self.start()
-        logger.info("Starting POWELL for {} iterations (maximum) with gtol={}...".format(maxiter, gtol))
-
-        optres = scipy.optimize.fmin_powell(
-                self.cost, self.params[self.paramslice],
-                args=(), xtol=0.0001, ftol=0.0001,
-                maxiter=maxiter, maxfun=None,
-                full_output=True, disp=True, retall=False, callback=self.callback, direc=None)
-
-        if len(optres) == 7:
-            (xopt, fopt, direc, iter, func_calls, warnflag, allvecs) = optres
-            self.cost(xopt) # Is it important to do this, to set the optimal parameters? It seems not.
-            logger.info("Done with optimization, {0} func_calls".format(func_calls))
-        else:
-            logger.warning("Optimization output is fishy")
-
-        self.end()
-
-
-
-
-
-
-    def minibatch_slsqp(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs): # Less effective than BFGS.. Usefull?
-
-        for loopi in range(mbloops):
-            if mbloops > 1:
-                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
-            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
-            self.optbatchchangeits.append(self.optit) # We record this minibatch change
-            self.slsqp(**kwargs)
-
-    def slsqp(self, maxiter=100, gtol=1e-8):
-
-        self.start()
-        logger.info("Starting SLSQP for {} iterations (maximum) with gtol={}...".format(maxiter, gtol))
-
-        optres = scipy.optimize.fmin_slsqp(self.cost, self.params[self.paramslice], eqcons=(), f_eqcons=None, ieqcons=(), f_ieqcons=None, bounds=(), fprime=None, fprime_eqcons=None, fprime_ieqcons=None, args=(), iter=maxiter, acc=gtol, iprint=1, disp=None, full_output=1, epsilon=1.4901161193847656e-08, callback=self.callback)
-
-        if len(optres) == 5:
-            (xopt, fopt, func_calls, imode, smode) = optres
-            self.cost(xopt) # Is it important to do this, to set the optimal parameters? It seems not.
-            logger.info("Done with optimization, {0} func_calls".format(func_calls))
-        else:
-            logger.warning("Optimization output is fishy")
-
-        self.end()
-        
-        
-        
-    def minibatch_backprop(self, mbsize=None, mbfrac=0.1, mbloops=10, **kwargs):
-
-        for loopi in range(mbloops):
-            if mbloops > 1:
-                logger.info("Starting minibatch loop {loopi} of {mbloops}...".format(loopi=loopi+1, mbloops=mbloops))
-            self.dat.random_minibatch(mbsize=mbsize, mbfrac=mbfrac)
-            self.optbatchchangeits.append(self.optit) # We record this minibatch change
-            self.backprop(**kwargs)
-
-
-
-    def backprop(self, maxiter=100, eta=0.0001):
-
-        self.start()
-        logger.info("Starting BACKPROP for {} iterations (maximum) ...".format(maxiter))
-        
-        cost = self.currentcost()
-        
-        tmpnet = self.net
-
-        for iter in range(maxiter):
-                 	
-            logger.info("Starting iteration number {}, current cost {}, cost difference {}".format(iter+1, self.currentcost(), self.currentcost()-cost))
-            cost = self.currentcost()
-            
-            outputs = self.net.run(self.dat.traininputs)
-            targets = self.dat.traintargets
-            
-            deltas = [1]*len(self.net.layers) #Declaring the list that will contain all the deltas (or "errors")
-            
-            deltas[-1] = np.broadcast_to(np.mean(outputs,axis=0) - targets, np.shape(outputs))/(np.shape(outputs)[0]) #Last layer delta, note that activation function for this layer is the identity function
-            
-            for i in range(-2,-len(self.net.layers)-1,-1):
-                deltas[i] = self.net.derivative_run(self.dat.traininputs,len(self.net.layers)+i) * np.rollaxis(np.dot(np.rollaxis(self.net.layers[i+1].weights,1),deltas[i+1]),1)
-
-            for li in range(len(self.net.layers)):
-                tmpnet.layers[li].weights -= eta * np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2))) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
-                tmpnet.layers[li].biases -= eta * np.sum(deltas[li],(0,2))
-                
-                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
-
-                self.net = tmpnet
-                	
-       
-
-        self.optit += 1
-        now = datetime.now()
-        secondstaken = (now - self.iterationstarttime).total_seconds()
-        callstaken = self.optitcall
-
-        self.optittimes.append(secondstaken)
-        self.optiterrs_train.append(self.opterr)
-        self.optitcalls.append(self.optcall)
-        self.optitparams.append(copy.deepcopy(self.params)) # We add a copy of the current params
-
-        # Now we evaluate the cost on the validation set:
-        valerr = self.valcost()
-        self.optiterrs_val.append(valerr)
-
-        valerrratio = valerr / self.opterr
-
-        mscallcase = 1000.0 * float(secondstaken) / (float(callstaken) * self.dat.getntrain()) # Time per call and training case
-
-        logger.info("Iter. {self.optit:4d}, {self.errfctname} train = {self.opterr:.6e}, val = {valerr:.6e} ({valerrratio:4.1f}), {time:.4f} s for {calls} calls ({mscallcase:.4f} ms/cc)".format(
-                self=self, time=secondstaken, valerr=valerr, valerrratio=valerrratio, calls=callstaken, mscallcase=mscallcase))
-
-        if self.itersavepath != None:
-            self.save(self.itersavepath)
-
-        # We reset the iteration counters:
-        self.iterationstarttime = datetime.now()
-        self.optitcall = 0
-
-        self.end()        
-        
-
-    def numgrad(self,li,epsilon = 0.0001):
-		
-		tmpnet = self.net
-		grad = np.ones(np.shape(tmpnet.layers[li].weights))
-		
-		for i in range(np.shape(tmpnet.layers[li].weights)[0]):
-		    for j in range(np.shape(tmpnet.layers[li].weights)[1]):
-		        tmpnet.layers[li].weights[i,j] += epsilon 
-		        plus = tmpnet.run(self.dat.traininputs)
-		        tmpnet.layers[li].weights[i,j] -= 2.0 *epsilon
-		        minus = tmpnet.run(self.dat.traininputs)
-		        tmpnet.layers[li].weights[i,j] += epsilon # Reestablishing the correct value of the weight
-		        grad[i,j] = (err.ssb(plus, self.dat.traintargets) - err.ssb(minus, self.dat.traintargets)) / (2.0 * epsilon)	        
-		
-		return grad
-#       def anneal(self, maxiter=100):
-#
-#               self.testcost()
-#               logger.info("Starting annealing for {0} iterations (maximum)...".format(maxiter))
-#
-#               optres = scipy.optimize.basinhopping(
-#                       self.cost, self.params,
-#                       niter=maxiter, T=0.001, stepsize=0.1, minimizer_kwargs=None, take_step=None, accept_test=None,
-#                       callback=self.callback, interval=100, disp=True, niter_success=None)
-#
-#                       # Warning : interval is not the callback interval, but the step size update interval.
-#
-#               print optres
-#
-#               print len(optres)
-
-#       def fmin(self, maxiter=100):    # One iteration per call
-#               self.testcost()
-#               logger.info("Starting fmin for {0} iterations (maximum)...".format(maxiter))
-#
-#               optres = scipy.optimize.fmin(
-#                       self.cost, self.params,
-#                       xtol=0.0001, ftol=0.0001, maxiter=maxiter, maxfun=None,
-#                       full_output=True, disp=True, retall=True, callback=self.callback)
-#
-#               print optres
-
-
-#               """
-#               optres = scipy.optimize.fmin_powell(
-#                       cost, params,
-#                       maxiter=maxiter, ftol=1e-06,
-#                       full_output=True, disp=True, retall=True, callback=self.optcallback)
-#               """
-#               """
-#               optres = scipy.optimize.fmin(
-#                       cost, params,
-#                       xtol=0.0001, ftol=0.0001, maxiter=maxiter, maxfun=None,
-#                       full_output=True, disp=True, retall=True, callback=self.optcallback)
-#               """
-#               """
-#               optres = scipy.optimize.minimize(
-#                       cost, params, method="Anneal",
-#                       jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-#                       tol=None, callback=self.optcallback, options={"maxiter":maxiter, "disp":True})
-#               """
-#
-#               """
-#               optres = scipy.optimize.basinhopping(
-#                       cost, params,
-#                       niter=maxiter, T=0.001, stepsize=1.0, minimizer_kwargs=None, take_step=None, accept_test=None,
-#                       callback=self.optcallback, interval=50, disp=True, niter_success=None)
-#               """

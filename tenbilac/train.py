@@ -52,7 +52,6 @@ class Training:
 
         # Setting up the cost function
         self.errfctname = errfctname
-        self.errfct = eval("err.{0}".format(self.errfctname))
 
         # We initialize some counters for the optimization:
         self.optit = 0 # The iteration counter
@@ -81,10 +80,10 @@ class Training:
 
         self.regularization = regularization
         
-        o = T.tensor3("o")
+        o = T.dtensor3("o")
         t = T.dmatrix("t")
-        errx = 0.5*T.sum(T.square((T.sum(o, axis=0)/T.shape(o)[0] - t)))
-        #self.errfct = function(inputs=[o,t],outputs = errx)
+        errx = 0.5*T.sum(T.square((T.mean(o, axis=0) - t)))
+        self.errfct = function(inputs=[o,t],outputs = errx)
 
         logger.info("Done with setup of {self}".format(self=self))
 
@@ -246,7 +245,6 @@ class Training:
         """
         Called a the beginning of a training
         """
-        self.testcost()
         self.iterationstarttime = datetime.now()
         self.optitcall = 0
 
@@ -458,10 +456,10 @@ class Training:
         self.optitparams.append(copy.deepcopy(self.params)) # We add a copy of the current params
 
         # Now we evaluate the cost on the validation set:
-        valerr = self.valcost()
-        self.optiterrs_val.append(valerr)
+        #valerr = self.valcost()
+        #self.optiterrs_val.append(valerr)
 
-        valerrratio = valerr / self.opterr
+        #valerrratio = valerr / self.opterr
 
         mscallcase = 1000.0 * float(secondstaken) / (float(callstaken) * self.dat.getntrain()) # Time per call and training case
 

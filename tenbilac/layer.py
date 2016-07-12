@@ -47,16 +47,19 @@ class Layer():
 		b = T.tensor3("b")
 		b = T.patternbroadcast(b,[False,True,True])
 
-		run3x = 1/T.cosh(T.dot(w, i) + b)**2
+		run3x = T.tanh(T.dot(w, i) + b)
 		self.run3 = function(inputs=[i,w,b],outputs=run3x)
+		
+		derx = T.cosh(T.dot(w, i) + b)
+		self.derrun = function(inputs=[i,w,b],outputs=derx)
 		
 		i2 = T.dmatrix("i2")
 		b2 = T.dmatrix("b2")
 		b2  = T.patternbroadcast(b2,[False,True])
 		
-		run2x = 1/T.cosh(T.dot(w, i) + b)**2
+		run2x = T.tanh(T.dot(w, i) + b)
 		self.run2 = function(inputs=[i,w,b],outputs=run3x)
-		 
+					 
 		
 	def addnoise(self, wscale=0.1, bscale=0.1):
 		"""
@@ -148,6 +151,6 @@ class Layer():
 		
 		if inputs.ndim == 3:
 			assert inputs.shape[1] == self.ni
-			return np.rollaxis(self.deract(np.dot(self.weights, inputs) + self.biases.reshape((self.nn, 1, 1))),1)
+			return np.rollaxis(self.derrun(inputs,self.weights,self.biases.reshape((self.nn, 1, 1))),1)
 		else:
 			raise RuntimeError("Only 3D inputs impleted for backpropagation")

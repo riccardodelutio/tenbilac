@@ -50,7 +50,7 @@ class Layer():
 		run3x = T.tanh(T.dot(w, i) + b)
 		self.run3 = function(inputs=[i,w,b],outputs=run3x)
 		
-		derx = T.cosh(T.dot(w, i) + b)
+		derx = 1./T.cosh(T.dot(w, i) + b)**2
 		self.derrun = function(inputs=[i,w,b],outputs=derx)
 		
 		i2 = T.dmatrix("i2")

@@ -449,7 +449,7 @@ class Training:
                 tmpnet.layers[li].weights -= eta * self.tens(deltas[li],self.net.par_run(self.dat.traininputs,li)) #Best take at vectorization so far.. Note that numpy's tensordot function doesn't work with masked array
                 tmpnet.layers[li].biases -= eta * self.summ(deltas[li])
                 
-                logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
+                #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
 
                 self.net = tmpnet
                 	

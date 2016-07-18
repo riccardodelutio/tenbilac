@@ -432,7 +432,7 @@ class Training:
 
         for iter in range(maxiter):
                  	
-            logger.info("Starting iteration number {}, current cost {}".format(iter+1, self.currentcost()))
+            logger.info("Starting iteration number {}, current cost {}, valcost {}".format(iter+1, self.currentcost(),self.valcost()))
             cost = self.currentcost()
             
             outputs = self.net.run(self.dat.traininputs)

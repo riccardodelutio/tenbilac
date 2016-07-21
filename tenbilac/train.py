@@ -563,7 +563,7 @@ class Training:
                 
                 #logger.info("\n{}".format(np.tensordot(deltas[li],self.net.par_run(self.dat.traininputs,li),((0,2),(0,2)))-self.numgrad(li,epsilon = 0.0000001)))
 
-            self.net = tmpnet
+             self.net = tmpnet
         
         self.optit += 1
         now = datetime.now()
